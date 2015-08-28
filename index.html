@@ -1,0 +1,365 @@
+<html>
+  <head>
+    <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.js"></script>  
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+    <style type="text/css">
+    .statuslight
+    {
+      float: right;
+      color: green;
+      font-weight: bold;
+      font-size: 12px;
+    }
+    .lastOnline
+    {
+      float: right;
+      font-size: 12px;
+    }
+    .myMsgBox
+    {
+      border: 1px solid black;
+      height: 300px;
+    }
+    .messageList
+    {
+      height: 262px;
+      overflow-y: auto;
+      margin-top: -10px;
+      padding: 0px 8px;
+    }
+    .oppName
+    {
+      background-color: #ddd;
+      padding: 8px;
+      margin-top: 0px;
+      border-bottom: 1px solid;
+    }
+    .msgTypeBox
+    {
+      border-color: black;
+      border-top: none;
+    }
+    .userlist td a:hover
+    {
+      text-decoration: none;
+    }
+    .senderMsg
+    {
+      text-align: center;
+      padding: 6px;
+      border-radius: 12px;
+      margin: 4px 3px;
+    }
+    .closeChat
+    {
+      margin-top: -5px;
+    }
+    .lastMSg
+    {
+      font-size: 12px;
+    }
+    /*.senderMsg
+    {
+      float: left;
+      padding: 6px;
+      border-radius: 12px;
+      margin: 4px 3px;
+    }*/
+    </style>
+   </head>
+  <body>
+  
+  <!-- creating or login popup -->
+  <div class="modal fade login-modal" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" data-backdrop="static" data-keyboard="false" >
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="lName">Name (Must be unique)</label>
+          <input type="text" class="form-control" id="lName" placeholder="Name">
+        </div>
+        <button type="submit" class="btn btn-danger" id="send">Start</button>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- userlist table -->
+  <!-- for showing online -->
+  <!-- <span class="status-light">in online</span> -->
+<div class="container">
+
+<ul class="nav nav-tabs col-md-12 ulTab">
+  <li><a data-toggle="tab" href="#home">Contacts</a></li>
+  <li id="menu1id" class="active"><a data-toggle="tab" href="#menu1">Friends</a></li>
+  <li id="menu2id"><a data-toggle="tab" href="#menu2">Chats</a></li>
+</ul>
+
+<div class="tab-content col-md-4">
+  <div id="home" class="tab-pane fade">
+    
+    <div class="userlist">
+    <div class="row">
+      <table class="table table-striped table-bordered userlistTable">
+          <tbody>
+            <tr><th>Welcome</th></tr>
+            <tr><td>No one is in server</td></tr>
+          </tbody>
+      </table>
+    </div>
+  </div>
+
+  </div>
+  <div id="menu1" class="tab-pane fade in active">
+
+    <div class="frndlist">
+    <div class="row">
+      <table class="table table-striped table-bordered">
+          <tbody>
+            <tr><th>Hi, <span class="userScreen"></span></th></tr>
+            <tr><td>No one is in server</td></tr>
+          </tbody>
+      </table>
+    </div>
+  </div>
+
+  </div>
+  <div id="menu2" class="tab-pane fade">
+    <!-- Chat text area -->
+    <div class="chatBox">
+      <div class="row">
+        <div class="myMsgBox">
+        <h4 class="oppName"></h4>
+        <div class="messageList">
+          
+        </div>
+        </div>
+        <div class="msgType">
+          <input type="text" class="msgTypeBox col-md-12">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+  <script type="text/javascript">
+    var socket = io.connect();
+    var name;
+    var oppName;
+
+    //getting user list
+    socket.on('userlist',function(data){
+      
+      if(data.userlist.length)
+      {
+
+        $(".userlist tbody").html('');
+        $(".userlist tbody").append("<tr><th>Who are all in the chat</th></tr>");
+        for (var i = 0; i < data.userlist.length; i++) {
+          
+            $(".userlist tbody").append("<tr><td><a class='userNames' href='javascript:void(0);' onclick='javascript:createChat(this);'>"+data.userlist[i].username+"</a></td></tr>");
+          
+        };
+      }
+      
+    });
+
+    //getting frnds list
+    socket.on('frndlist',function(data){
+
+      //console.log(data.frndlist[0]);
+      //console.log(data.frndlist[0].friends);
+      
+      if(data.frndlist[0].friends.length > 0)
+      {
+        var currentDate;
+        var logoutDate;
+        var timeInfo;
+        $(".frndlist tbody").html('');
+        $(".frndlist tbody").append("<tr><th>Hi, "+data.mainuser+"<span class='pull-right'><a href='javascript:void(0);' onclick='javascript:logout();'>Logout</a></span> </th></tr>");
+        for (var i = 0; i < data.frndlist[0].friends.length; i++) {
+
+          if(data.frndlist[0].friends[i].lastMsgTime == '' || data.frndlist[0].friends[i].lastMsgTime == null)
+          {
+            timeInfo = '';
+          }
+          else
+          {
+            currentDate = new Date();
+            logoutDate = new Date(data.frndlist[0].friends[i].lastMsgTime);
+            var Hours = logoutDate.getHours();
+            var Mins = logoutDate.getMinutes();
+            currentDateCng = new Date(convertDate(currentDate));
+            logoutDateCng = new Date(convertDate(logoutDate));
+
+            if(currentDateCng > logoutDateCng)
+            {
+              timeInfo = convertDate(logoutDate);
+            }
+            else
+            {
+
+            if(Hours > 12)
+            {
+              Hours = Hours - 12;
+              times = "PM";
+            }
+            else
+            {
+              times = "AM";
+              if(Hours == 0)
+              {
+                Hours = 12;
+              }
+            }
+            if(Mins < 10)
+            {
+              Mins = "0"+Mins;
+            }
+
+            timeInfo = Hours+":"+Mins+" "+times;
+            }
+          }
+
+          if(data.frndlist[0].friends[i].lastMsg != '')
+          {
+            lastMsg = data.frndlist[0].friends[i].lastMsg;
+          }
+          else
+          {
+            lastMsg = '';
+          }
+          if(data.frndlist[0].friends[i].notification)
+          {
+            notification = data.frndlist[0].friends[i].notification+" unread";
+          }
+          else
+          {
+            notification = '';
+          }
+            
+            $(".frndlist tbody").append("<tr><td><a class='userNames' href='javascript:void(0);' onclick='javascript:createChat(this);'>"+data.frndlist[0].friends[i].name+"</a><span class='col-md-offset-2'>"+notification+"</span><span class='lastOnline'>"+timeInfo+"</span><br><span class='lastMSg'>"+lastMsg+"</span></td></tr>");
+          
+        };
+      }
+      
+    });
+    var frndchat_id;
+    var messageList;
+  // for printing messages
+    socket.on('chatmessages',function(data){
+      $('.chatBox').show();
+      $('.msgTypeBox').focus();
+      $('.messageList').html('');
+      oppName = data.frndname;
+      frndchat_id = data.chatmessages[0].chat_id;
+      messageList = data.chatmessages[0].message;
+      $('.oppName').html(data.frndname+"<span class='pull-right'></span>");
+      
+      for (var i = 0; i < messageList.length; i++) {
+        if(messageList[i].sender == name)
+        {
+            $('.messageList').append('<p class="bg-info senderMsg">'+messageList[i].content+'</p>');    
+        }
+        else
+        {
+            $('.messageList').append('<p class="bg-danger senderMsg">'+messageList[i].content+'</p>');    
+        }
+      };
+      $(".messageList").scrollTop($(".messageList")[0].scrollHeight);
+      //console.log(data);
+    });
+    socket.on('newMessage',function(data){
+      //var oppName = $('.oppName').html();
+      //console.log(data);
+      if(data.sender == oppName || data.sender == name)
+      {
+        if(data.sender == name)
+        {
+            $('.messageList').append('<p class="bg-info senderMsg">'+data.content+'</p>');    
+        }
+        else
+        {
+            $('.messageList').append('<p class="bg-danger senderMsg">'+data.content+'</p>');    
+        }
+        $(".messageList").scrollTop($(".messageList")[0].scrollHeight);
+      }
+    });
+    $('.msgTypeBox').keydown(function(e){
+        if(e.keyCode==13)
+        {
+            socket.emit('saveMessage',{
+              'msgContent' : $(this).val(),
+              'chat_id' : frndchat_id,
+              'sender' : name,
+              'receiver' : oppName
+            });
+            $(this).val('');
+        }
+    });
+
+    $(document).ready(function(){
+      $('.login-modal').modal('show');
+      $('.userlist').hide();
+      $('.frndlist').hide();
+      $('.chatBox').hide();
+      $('.ulTab').hide();
+      $('#send').click(function(){
+        name = $('#lName').val();
+        socket.emit('createUser',{
+          'username': name
+        });
+        $('.login-modal').modal('hide');
+        $('.ulTab').show();
+        $('.userlist').show();
+        $('.frndlist').show();
+        //window.location.replace('/client');
+        setInterval(function(){
+          socket.emit('instanceUserStatus',{
+            'username': name
+          });
+        },1000);
+      });
+    });
+    //for initiate chat
+    function createChat(frndName)
+      {
+        var chat2 = $(frndName).html();
+        socket.emit('createChatList',{
+          'chat1':name,
+          'chat2':chat2
+        });
+        $('#menu1id').removeClass('active');
+        $('#menu2id').addClass('active');
+        $('#menu1').removeClass('active').removeClass('in');
+        $('#menu2').addClass('in').addClass('active');
+      }
+    //for converting the date
+    function convertDate(oldDate)
+    {
+      var dd = oldDate.getDate();
+      var mm = oldDate.getMonth()+1; //January is 0!
+      var yyyy = oldDate.getFullYear();
+      if(dd<10) {
+          dd='0'+dd
+      } 
+
+      if(mm<10) {
+          mm='0'+mm
+      } 
+      newDate = mm+'/'+dd+'/'+yyyy;
+      //newDate = new Date(newDate);
+      return newDate;
+    }
+    //for logout and closing the window
+    function logout()
+    {
+      open(location, '_self').close();
+    }
+  </script>
+
+  </body>
+</html>

@@ -1,0 +1,9 @@
+/*if(logoutDate.getHours() < 12 )
+            {
+              timeInfo = "last seen "+logoutDate.getHours()+":"+logoutDate.getMinutes()+" AM"; 
+            }
+            else
+            {
+              Hours = logoutDate.getHours() - 12;
+              timeInfo = "last seen "+Hours+":"+logoutDate.getMinutes()+" PM";
+            }*/
